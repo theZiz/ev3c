@@ -9,7 +9,7 @@
 #include <fcntl.h>
 #include <string.h>
 
-enum ev3_data_format_enum get_data_format(char* buffer)
+enum ev3_bin_data_format_enum get_data_format(char* buffer)
 {
 	if (strcmp(buffer,"u8") == 0)
 		return U8;
@@ -119,18 +119,73 @@ enum ev3_sensor_identifier get_identifier(char* buffer)
 	return UNKNOWN;
 }
 
-int read_file(char* file,char* buffer,int size)
+int32_t read_file(char* file,char* buffer,int32_t size)
 {
-	int fd = open(file,O_RDONLY);
+	int32_t fd = open(file,O_RDONLY);
 	if (fd < 0)
 		return fd;
-	int c = read(fd,buffer,size);
-	printf("%i\n",c);
+	int32_t c = read(fd,buffer,size);
 	if (c > 0)
 		c--;
 	buffer[c] = 0;
 	close(fd);
 	return 0;
+}
+
+void load_sensor( ev3_sensor_ptr sensor, int32_t nr)
+{
+	ev3_string buffer;
+	char file[1024];
+	//loading the struct with some initial values
+	sprintf(file,"/sys/class/lego-sensor/sensor%i/driver_name",nr);
+	read_file(file,sensor->driver_name,EV3_STRING_LENGTH);
+	sensor->driver_identifier = get_identifier(sensor->driver_name);
+	sprintf(file,"/sys/class/lego-sensor/sensor%i/port_name",nr);
+	read_file(file,buffer,EV3_STRING_LENGTH);
+	sensor->port_nr = atoi(&buffer[2]);
+	sensor->sensor_nr = nr;
+	sensor->bin_fd = -1;
+	int32_t i;
+	for (i = 0; i < 8; i++)
+		sensor->val_fd[i] = -1;
+	memset(sensor->bin_data,0,32);
+	sprintf(file,"/sys/class/lego-sensor/sensor%i/num_values",nr);
+	read_file(file,buffer,EV3_STRING_LENGTH);
+	sensor->data_count = atoi(buffer);
+	sprintf(file,"/sys/class/lego-sensor/sensor%i/bin_data_format",nr);
+	read_file(file,buffer,EV3_STRING_LENGTH);
+	sensor->bin_data_format = get_data_format(buffer);
+	sprintf(file,"/sys/class/lego-sensor/sensor%i/units",nr);
+	read_file(file,sensor->units,EV3_STRING_LENGTH);
+	sprintf(file,"/sys/class/lego-sensor/sensor%i/decimals",nr);
+	read_file(file,buffer,EV3_STRING_LENGTH);
+	sensor->decimals = atoi(buffer);
+	sprintf(file,"/sys/class/lego-sensor/sensor%i/poll_ms",nr);
+	if (read_file(file,buffer,EV3_STRING_LENGTH))
+		sensor->poll_ms = atoi(buffer);
+	else
+		sensor->poll_ms = -1;
+	sprintf(file,"/sys/class/lego-sensor/sensor%i/modes",nr);
+	read_file(file,file,1024);
+	sensor->mode_count = 0;
+	char* mom = file;
+	char* end;
+	while (end = strchr(mom,' '))
+	{
+		end[0] = 0;
+		sprintf(sensor->modes[sensor->mode_count],"%s",mom);
+		sensor->mode_count++;
+		mom = end;
+		mom++;
+	}
+	sprintf(sensor->modes[sensor->mode_count],"%s",mom);
+	sensor->mode_count++;
+	sensor->next = NULL;
+	sprintf(file,"/sys/class/lego-sensor/sensor%i/mode",nr);
+	read_file(file,buffer,EV3_STRING_LENGTH);
+	for (sensor->mode = 0; sensor->mode < sensor->mode_count; sensor->mode++)
+		if (strcmp(sensor->modes[sensor->mode],buffer) == 0)
+			break;	
 }
 
 ev3_sensor_ptr ev3_load_sensors( void )
@@ -148,55 +203,7 @@ ev3_sensor_ptr ev3_load_sensors( void )
 				strcmp(dir->d_name,"..") == 0)
 				continue;
 			ev3_sensor_ptr sensor = (ev3_sensor_ptr)malloc(sizeof(ev3_sensor));
-			ev3_string buffer;
-			char file[1024];
-			//loading the struct with some initial values
-			sprintf(file,"/sys/class/lego-sensor/%s/driver_name",dir->d_name);
-			read_file(file,sensor->driver_name,EV3_STRING_LENGTH);
-			sensor->driver_identifier = get_identifier(sensor->driver_name);
-			sprintf(file,"/sys/class/lego-sensor/%s/port_name",dir->d_name);
-			read_file(file,buffer,EV3_STRING_LENGTH);
-			sensor->port_nr = atoi(&buffer[2]);
-			sensor->sensor_nr = atoi(&(dir->d_name[6]));
-			sensor->fd = -1;
-			memset(sensor->data,0,32);
-			sprintf(file,"/sys/class/lego-sensor/%s/num_values",dir->d_name);
-			read_file(file,buffer,EV3_STRING_LENGTH);
-			sensor->data_count = atoi(buffer);
-			sprintf(file,"/sys/class/lego-sensor/%s/bin_data_format",dir->d_name);
-			read_file(file,buffer,EV3_STRING_LENGTH);
-			sensor->data_format = get_data_format(buffer);
-			sprintf(file,"/sys/class/lego-sensor/%s/units",dir->d_name);
-			read_file(file,sensor->units,EV3_STRING_LENGTH);
-			sprintf(file,"/sys/class/lego-sensor/%s/decimals",dir->d_name);
-			read_file(file,buffer,EV3_STRING_LENGTH);
-			sensor->decimals = atoi(buffer);
-			sprintf(file,"/sys/class/lego-sensor/%s/poll_ms",dir->d_name);
-			if (read_file(file,buffer,EV3_STRING_LENGTH))
-				sensor->poll_ms = atoi(buffer);
-			else
-				sensor->poll_ms = -1;
-			sprintf(file,"/sys/class/lego-sensor/%s/modes",dir->d_name);
-			read_file(file,file,1024);
-			sensor->mode_count = 0;
-			char* mom = file;
-			char* end;
-			while (end = strchr(mom,' '))
-			{
-				end[0] = 0;
-				sprintf(sensor->modes[sensor->mode_count],"%s",mom);
-				sensor->mode_count++;
-				mom = end;
-				mom++;
-			}
-			sprintf(sensor->modes[sensor->mode_count],"%s",mom);
-			sensor->mode_count++;
-			sensor->next = NULL;
-			sprintf(file,"/sys/class/lego-sensor/%s/mode",dir->d_name);
-			read_file(file,buffer,EV3_STRING_LENGTH);
-			for (sensor->mode = 0; sensor->mode < sensor->mode_count; sensor->mode++)
-				if (strcmp(sensor->modes[sensor->mode],buffer) == 0)
-					break;
+			load_sensor(sensor,atoi(&(dir->d_name[6])));
 			if (last_sensor)
 				last_sensor->next = sensor;
 			else
@@ -219,18 +226,28 @@ void ev3_delete_sensors( ev3_sensor_ptr sensors )
 	}
 }
 
-int ev3_open_sensor( ev3_sensor_ptr sensor )
+ev3_sensor_ptr ev3_open_sensor( ev3_sensor_ptr sensor )
 {
-	if (sensor->fd < 0)
+	if (sensor == NULL)
+		return NULL;
+	if (sensor->bin_fd < 0)
 	{
 		char file[1024];
 		sprintf(file,"/sys/class/lego-sensor/sensor%i/bin_data",sensor->sensor_nr);
-		sensor->fd = open(file,O_RDONLY);
+		sensor->bin_fd = open(file,O_RDONLY);
 	}
-	return sensor->fd;
+	int32_t i;
+	for (i = 0; i < sensor->data_count; i++)
+		if (sensor->val_fd[i] < 0)
+		{
+			char file[1024];
+			sprintf(file,"/sys/class/lego-sensor/sensor%i/value%i",sensor->sensor_nr,i);
+			sensor->val_fd[i] = open(file,O_RDONLY);
+		}
+	return sensor;
 }
 
-ev3_sensor_ptr ev3_search_sensor_by_identifier( ev3_sensor_ptr sensors, enum ev3_sensor_identifier identifier, int not_ready)
+ev3_sensor_ptr ev3_search_sensor_by_identifier( ev3_sensor_ptr sensors, enum ev3_sensor_identifier identifier, int32_t not_ready)
 {
 	ev3_sensor_ptr sensor = sensors;
 	while (sensor)
@@ -239,7 +256,7 @@ ev3_sensor_ptr ev3_search_sensor_by_identifier( ev3_sensor_ptr sensors, enum ev3
 		{
 			if (not_ready == 0)
 				return sensor;
-			if (sensor->fd < 0)
+			if (sensor->bin_fd < 0)
 				return sensor;
 		}
 		sensor = sensor->next;
@@ -247,43 +264,155 @@ ev3_sensor_ptr ev3_search_sensor_by_identifier( ev3_sensor_ptr sensors, enum ev3
 	return NULL;
 }
 
+ev3_sensor_ptr ev3_search_sensor_by_port( ev3_sensor_ptr sensors, int32_t port)
+{
+	ev3_sensor_ptr sensor = sensors;
+	while (sensor)
+	{
+		if (sensor->port_nr == port)
+			return sensor;
+		sensor = sensor->next;
+	}
+	return NULL;
+}
+
 void ev3_close_sensor( ev3_sensor_ptr sensor )
 {
-	if (sensor->fd >= 0)
+	if (sensor == NULL)
+		return;
+	if (sensor->bin_fd >= 0)
 	{
-		close(sensor->fd);
-		sensor->fd = -1;
+		close(sensor->bin_fd);
+		sensor->bin_fd = -1;
 	}
+	int32_t i;
+	for (i = 0; i < sensor->data_count; i++)
+		if (sensor->val_fd[i] >= 0)
+		{
+			close(sensor->val_fd[i]);
+			sensor->val_fd[i] = -1;
+		}
 }
 
 void ev3_update_sensor_bin( ev3_sensor_ptr sensor)
 {
-	lseek(sensor->fd,0,SEEK_SET);
-	int i;
-	switch (sensor->data_format)
+	if (sensor == NULL)
+		return;
+	lseek(sensor->bin_fd,0,SEEK_SET);
+	int32_t i,r;
+	switch (sensor->bin_data_format)
 	{
 		case U8: case S8:
 			for (i = 0; i < sensor->data_count; i++)
-				read(sensor->fd,&(sensor->data[i]),1);
+				r = read(sensor->bin_fd,&(sensor->bin_data[i]),1);
 			break;
 		case U16: case S16:
 			for (i = 0; i < sensor->data_count; i++)
-				read(sensor->fd,&(sensor->data[i]),2);
+				r = read(sensor->bin_fd,&(sensor->bin_data[i]),2);
 			break;
 		case S16_BE:
 			for (i = 0; i < sensor->data_count; i++)
 			{
-				uint8_t* data = (uint8_t*)&(sensor->data[i]);
-				read(sensor->fd,&(data[3]),1);
-				read(sensor->fd,&(data[2]),1);
+				uint8_t* data = (uint8_t*)&(sensor->bin_data[i]);
+				r = read(sensor->bin_fd,&(data[3]),1);
+				r = read(sensor->bin_fd,&(data[2]),1);
 			}
 			break;
 		default:
-			read(sensor->fd,sensor->data,sensor->data_count * 4);
+			r = read(sensor->bin_fd,sensor->bin_data,sensor->data_count * 4);
 			break;
 	}
 }
 
-void ev3_update_sensor_value( ev3_sensor_ptr sensor);
+void ev3_update_sensor_val( ev3_sensor_ptr sensor)
+{
+	if (sensor == NULL)
+		return;
+	int32_t i;
+	ev3_string buffer;
+	for (i = 0; i < sensor->data_count; i++)
+	{
+		lseek(sensor->val_fd[i],0,SEEK_SET);
+		int32_t c = read(sensor->val_fd[i],buffer,EV3_STRING_LENGTH);
+		if (c > 0)
+		{
+			c--;
+			buffer[c] = 0;
+			if (sensor->bin_data_format == FLOAT)
+				sensor->val_data[i].f = atof(buffer);
+			else
+				sensor->val_data[i].s32 = atoi(buffer);
+		}
+	}
+}
 
-void ev3_mode_sensor( ev3_sensor_ptr sensor, const char* mode);
+ev3_sensor_ptr ev3_mode_sensor( ev3_sensor_ptr sensor, int32_t mode)
+{
+	if (sensor == NULL)
+		return NULL;
+	if (mode < 0)
+		return sensor;
+	if (mode >= sensor->mode_count)
+		return sensor;
+	char file[1024];
+	sprintf(file,"/sys/class/lego-sensor/sensor%i/mode",sensor->sensor_nr);
+	int32_t fd = open(file,O_WRONLY);
+	int32_t l = strlen(sensor->modes[mode]);
+	int32_t r = write(fd,sensor->modes[mode],l);
+	if (l == r)
+	{
+		sensor->mode = mode;
+		ev3_string buffer;
+		sprintf(file,"/sys/class/lego-sensor/sensor%i/num_values",sensor->sensor_nr);
+		read_file(file,buffer,EV3_STRING_LENGTH);
+		sensor->data_count = atoi(buffer);
+		sprintf(file,"/sys/class/lego-sensor/sensor%i/units",sensor->sensor_nr);
+		read_file(file,sensor->units,EV3_STRING_LENGTH);
+		if (sensor->bin_fd >= 0)
+		{
+			ev3_close_sensor(sensor);
+			ev3_open_sensor(sensor);
+		}
+	}
+	close(fd);
+	return sensor;
+}
+
+ev3_sensor_ptr ev3_driver_sensor( ev3_sensor_ptr sensor, const char* driver)
+{
+	if (sensor == NULL)
+		return NULL;
+	int32_t was_open = (sensor->bin_fd >= 0);
+	if (was_open)
+		ev3_close_sensor(sensor);
+	char file[1024];
+	sprintf(file,"/sys/class/lego-port/port%i/set_device",sensor->port_nr-1);
+	int32_t fd = open(file,O_WRONLY);
+	int32_t l = strlen(driver);
+	int32_t r = write(fd,driver,l);
+	close(fd);
+	if (l == r)
+	{
+		sprintf(file,"/sys/class/lego-port/port%i/in%i:%s/lego-sensor",sensor->port_nr-1,sensor->port_nr,driver);
+		DIR *d;
+		struct dirent *dir;
+		d = opendir(file);
+		int32_t nr = sensor->sensor_nr;
+		if (d)
+		{
+			while ((dir = readdir(d)) != NULL)
+			{
+				if (strcmp(dir->d_name,".") == 0 ||
+					strcmp(dir->d_name,"..") == 0)
+					continue;
+				break;
+			}
+			nr = atoi(&(dir->d_name[6]));
+			closedir(d);
+		}			
+		load_sensor( sensor, nr);
+	}
+	if (was_open)
+		ev3_open_sensor(sensor);
+	return sensor;
+}

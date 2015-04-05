@@ -3,7 +3,7 @@ ifndef RANLIB
 	RANLIB = ranlib
 endif
 
-all: lib/ev3c.a bin/test
+all: lib/ev3c.a bin/test_sensor
 
 obj/%.o: %.c ev3c.h Makefile
 	mkdir -p $(@D)
@@ -13,13 +13,13 @@ lib/ev3c.a: obj/ev3c.o
 	mkdir -p $(@D)
 	$(AR) rc $@ $^ && $(RANLIB) $@
 
-bin/test: test.c lib/ev3c.a
+bin/test_sensor: test_sensor.c lib/ev3c.a
 	mkdir -p $(@D)
 	$(CC) -o $@ $< lib/ev3c.a $(CFLAGS)
 
 documentation: *.h
 	mkdir -p /tmp/ev3DocumentationTemp
-	naturaldocs -i . -xi ./documentation -o HTML documentation -p /tmp/ev3DocumentationTemp
+	naturaldocs -i . -xi ./ev3c_documentation -o HTML ev3c_documentation -p /tmp/ev3DocumentationTemp
 
 .PHONY: all clean
 

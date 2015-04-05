@@ -42,9 +42,29 @@
  * commands and similar. The max length is <EV3_STRING_LENGTH>.*/
 typedef char ev3_string[EV3_STRING_LENGTH];
 
+/* Section: Sensors
+ * 
+ * These functions are for reading sensor values of the EV3 brick. The
+ * flow is to search first for all connected sensors with
+ * <ev3_load_sensors>. This list can then be searched with
+ * <ev3_search_sensor_by_identifier> and <ev3_search_sensor_by_port>
+ * (or by hand). To use a sensor, it has to be opened with
+ * <ev3_open_sensor>. The sensor values are stored in the <ev3_sensor>
+ * struct (variables bin_data and val_data). However they need to be
+ * updated by hand calling <ev3_update_sensor_bin> or
+ * <ev3_update_sensor_val>. In the very end the sensors should be closed
+ * using <ev3_close_sensor> or using <ev3_delete_sensors>, which cleans
+ * the list and closes all sensors if open.
+ * 
+ * Keep in mind, that some sensors are not identified automaticly (like
+ * the NXT sound sensor). These device need to be set to the right
+ * driver using <ev3_driver_sensor>.*/
+
 /* enum: ev3_sensor_identifier
  * 
- * a number for every (yet) supported sensor in ev3dev*/
+ * a number for every (yet) supported sensor in ev3dev. For more
+ * information have a look at the
+ * <ev3dev wiki at http://www.ev3dev.org/docs/sensors>.*/
 enum ev3_sensor_identifier
 {
 	EV3_ANALOG_XX,
@@ -93,7 +113,10 @@ enum ev3_sensor_identifier
 	UNKNOWN
 };
 
-enum ev3_data_format_enum
+/* enum: ev3_bin_data_format_enum
+ * 
+ * the format of the binary raw data of the sensors.*/
+enum ev3_bin_data_format_enum
 {
 	U8,
 	S8,
@@ -114,7 +137,36 @@ enum ev3_data_format_enum
  * driver
  * port_nr - (int32) Port (1..4) of the EV3 brick
  * sensor_nr - (int32) internal, incrementing counter of the sensors in
- * ev3dev */
+ * ev3dev
+ * bin_fd - (int32) file descriptor for reading the raw data for the
+ * sensor. -1 if not set or if an error occured.
+ * val_fd - (array of int32) 8 file descriptors for reading the formated
+ * data of the sensor.
+ * bin_data - (array of union) the read raw data of the sensor.
+ * data_count values are stored. Use <ev3_update_sensor_bin> to update
+ * the data before using it. The union consists of u8 (uint8), s8 (int8),
+ * u16 (uint16), s16 (int16), s16_be (int16 big endian), s32 (int32) and
+ * f (float). Which you should use depends on bin_data_format. However
+ * s32 should always give you useful results (except for f and s16_be).
+ * val_data - (array of union) the read formated data of the sensor.
+ * data_count values are stored. Use <ev3_update_sensor_val> to update
+ * the data before using it. The union consits only of s32 (int32) and
+ * f (float). f makes only sense to use, if bin_data_format is FLOAT.
+ * units - (<ev3_string>) the units used by the values, like V (Volt),
+ * pct (Percent) or u/m² (unicors per square meter).
+ * decimals - (int32) the decimal shift you should consider while interpretating
+ * the formated values, especially for the units to make sense. E.g.
+ * if the formated value is 667, units "pct" and decimals 1, the value
+ * would be 66.7% .
+ * poll_ms - (int32) the time in ms, when the sensor is reread for
+ * I2C devices.
+ * modes - (array of <ev3_string>) the supported modes of the sensor.
+ * mode_count - (int32) the number of supported modes of the sensor.
+ * However some modes may not be useable anyway. Have a look at the
+ * documentation of the sensor type for more information.
+ * mode - (int32) the choosen mode.
+ * next - (pointer of <ev3_sensor>) next element in the linked list.
+ * NULL for the last element.*/
 
 typedef struct ev3_sensor_struct *ev3_sensor_ptr;
 typedef struct ev3_sensor_struct
@@ -123,7 +175,8 @@ typedef struct ev3_sensor_struct
 	enum ev3_sensor_identifier driver_identifier;
 	int32_t port_nr;
 	int32_t sensor_nr;
-	int32_t fd;
+	int32_t bin_fd;
+	int32_t val_fd[8];
 	union
 	{
 		uint8_t u8;
@@ -133,32 +186,156 @@ typedef struct ev3_sensor_struct
 		int16_t s16_be;
 		int32_t s32;
 		float f;
-	} data[8];
-	int data_count;
-	enum ev3_data_format_enum data_format;
+	} bin_data[8];
+	union
+	{
+		int32_t s32;
+		float f;
+	} val_data[8];
+	int32_t data_count;
+	enum ev3_bin_data_format_enum bin_data_format;
 	ev3_string units;
-	int decimals;
-	int poll_ms;
+	int32_t decimals;
+	int32_t poll_ms;
 	ev3_string modes[16];
-	int mode_count;
-	int mode;
+	int32_t mode_count;
+	int32_t mode;
 	ev3_sensor_ptr next;
 } ev3_sensor;
 
+/* Function: ev3_load_sensors
+ * 
+ * Returns:
+ * *ev3_sensor - returns a linked list of all available sensors.*/
 ev3_sensor_ptr ev3_load_sensors( void );
 
+/* Function: ev3_delete_sensors
+ * 
+ * Deletes the linked list of available sensors.
+ * 
+ * Parameters:
+ * sensors - (pointer of <ev3_sensor>) list to delete*/
 void ev3_delete_sensors( ev3_sensor_ptr sensors );
 
-int ev3_open_sensor( ev3_sensor_ptr sensor );
+/* Function: ev3_open_sensor
+ * 
+ * Opens the sensor to be used. If called twice nothing happens.
+ * 
+ * Parameters:
+ * sensor - (pointer of <ev3_sensor>) the sensor to be opened. You can
+ * just iterate of all sensors returns by <ev3_load_sensors> or you
+ * search for a specific sensor with <ev3_search_sensor_by_identifier>
+ * or <ev3_search_sensor_by_port> and open just this one.
+ * 
+ * Returns:
+ * *ev3_sensor - returns the parameter. Useful if you opened the sensor
+ * with ev3_open_sensor(ev3_search_sensor_by_identifier(...)).*/
+ev3_sensor_ptr ev3_open_sensor( ev3_sensor_ptr sensor );
 
-ev3_sensor_ptr ev3_search_sensor_by_identifier( ev3_sensor_ptr sensors, enum ev3_sensor_identifier identifier, int not_ready);
+/* Function: ev3_search_sensor_by_identifier
+ * 
+ * Searches for a sensor in the linked list identified with the
+ * identifier. It may be, that you connected two sensors with the same
+ * identifier (e.g. two ev3-touch-sensors). In that case you can
+ * specify to search only for not yet opened sensors.
+ * 
+ * Parameters:
+ * sensors - (pointer of <ev3_sensor>) linked list of sensors created by
+ * <ev3_load_sensors>.
+ * identifier - (ev3_sensor_identifier) Identifier to search for.
+ * not_ready - (int32) specifies, whether an already opened sensor
+ * should be returned or not. If not_ready is 1 only a not yet opened
+ * sensor will be returned.
+ * 
+ * Returns:
+ * *ev3_sensor - the found sensor. May be NULL if nothing is found.*/
+ev3_sensor_ptr ev3_search_sensor_by_identifier( ev3_sensor_ptr sensors, enum ev3_sensor_identifier identifier, int32_t not_ready);
 
+/* Function: ev3_search_sensor_by_port
+ * 
+ * Searches for a sensor in the linked list identified with the
+ * port. The ports are labeled like on the EV3 brick starting with 1.
+ * 
+ * Parameters:
+ * sensors - (pointer of <ev3_sensor>) linked list of sensors created by
+ * <ev3_load_sensors>.
+ * port - (int32) Port to search for.
+ * 
+ * Returns:
+ * *ev3_sensor - the found sensor. May be NULL if nothing is found.*/
+ev3_sensor_ptr ev3_search_sensor_by_port( ev3_sensor_ptr sensors, int32_t port);
+
+/* Function: ev3_close_sensor
+ * 
+ * Closes the sensor. The pointer is not freed. The values are not
+ * reseted or invalid. You "just" can't use <ev3_update_sensor_bin> and
+ * <ev3_update_sensor_val> anymore.
+ * 
+ * Parameters:
+ * sensor - (point of <ev3_sensor>) sensor to close.*/
 void ev3_close_sensor( ev3_sensor_ptr sensor );
 
+/* Function: ev3_update_sensor_bin
+ * 
+ * Updates the raw values of the sensor. Faster than
+ * <ev3_update_sensor_val>, but the values may not be useful. Use it
+ * only if you ran into serious speed problems.
+ * The sensor needs to be opened with <ev3_open_sensor> first.
+ * 
+ * Parameters:
+ * sensor - (pointer of <ev3_sensor>) sensor to update it's raw values
+ * stored in bin_data.*/
 void ev3_update_sensor_bin( ev3_sensor_ptr sensor );
 
-void ev3_update_sensor_value( ev3_sensor_ptr sensor );
+/* Function: ev3_update_sensor_val
+ * 
+ * Updates the formated values of the sensor. Slower than
+ * <ev3_update_sensor_bin>, but the values are much more useful.
+ * Furthermore if I say "slow" I mean around 50µs, which is in fact
+ * quite fast (but still slower than ev3_update_sensor_bin).
+ * The sensor needs to be opened with <ev3_open_sensor> first.
+ * 
+ * Parameters:
+ * sensor - (pointer of <ev3_sensor>) sensor to update it's formated
+ * values stored in val_data.*/
+void ev3_update_sensor_val( ev3_sensor_ptr sensor );
 
-void ev3_mode_sensor( ev3_sensor_ptr sensor, const char* mode);
+/* Function: ev3_mode_sensor
+ * 
+ * Sets the mode of the sensor, e.g. COL-COLOR on the color sensor to
+ * get the color of the underground
+ * 
+ * Parameters:
+ * sensor - (pointer of <ev3_sensor>) sensor to change it's mode
+ * mode - (int32) mode to be set to. It refers to the number in the
+ * array modes in sensor. E.g. COL-COLOUR would be 2.
+ * 
+ * Returns:
+ * *ev3_sensor - the same pointer as passed as argument.  Useful for
+ * such call chains as
+ * ev3_open( ev3_mode_sensor( sensor, 1 ) );*/
+ev3_sensor_ptr ev3_mode_sensor( ev3_sensor_ptr sensor, int32_t mode);
+
+/* Functiion: ev3_driver_sensor
+ * 
+ * Some sensors (like the nxt sound sensor) are just identified as
+ * generic analog sensor. It is possible to use it, but the value may
+ * not be very handy or interpretable. So this function can be used
+ * to "force" a driver for a specific device. If the device is already
+ * open, it will be open afterwards. The same sensor struct is still
+ * used.
+ * 
+ * Parameters:
+ * sensor - (pointer of <ev3_sensor>) sensor to force to a new driver.
+ * driver - (const char*) name of the new driver, look in the
+ * documentation in the
+ * <ev3dev wiki at http://www.ev3dev.org/docs/sensors> to get the right
+ * driver name.
+ * 
+ * Returns:
+ * *ev3_sensor - the same pointer as passed as parameter. Useful for
+ * such call chains as
+ * ev3_open( ev3_driver_sensor( sound, "lego-nxt-sound" ) );*/
+ev3_sensor_ptr ev3_driver_sensor( ev3_sensor_ptr sensor, const char* driver);
 
 #endif
