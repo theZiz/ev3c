@@ -55,7 +55,7 @@ int main(int argc,char** argv)
 			printf("%s [%i]: \n",sensor->driver_name,sensor->port_nr);
 			int j;
 			for (j = 0; j < sensor->data_count;j++)
-				printf("\tvalue %i: %i(raw) %i(formated)\n",j,sensor->bin_data[0].s32,sensor->val_data[0].s32);
+				printf("\tvalue %i: %i (raw) - %i (formated)\n",j,sensor->bin_data[0].s32,sensor->val_data[0].s32);
 			sensor = sensor->next;
 		}
 		sleep(1);

@@ -8,6 +8,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
+#include <linux/fb.h>
+#include <sys/mman.h>
+#include <sys/ioctl.h>
 
 enum ev3_bin_data_format_enum get_data_format(char* buffer)
 {
@@ -180,7 +183,6 @@ void load_sensor( ev3_sensor_ptr sensor, int32_t nr)
 	}
 	sprintf(sensor->modes[sensor->mode_count],"%s",mom);
 	sensor->mode_count++;
-	sensor->next = NULL;
 	sprintf(file,"/sys/class/lego-sensor/sensor%i/mode",nr);
 	read_file(file,buffer,EV3_STRING_LENGTH);
 	for (sensor->mode = 0; sensor->mode < sensor->mode_count; sensor->mode++)
@@ -204,6 +206,7 @@ ev3_sensor_ptr ev3_load_sensors( void )
 				continue;
 			ev3_sensor_ptr sensor = (ev3_sensor_ptr)malloc(sizeof(ev3_sensor));
 			load_sensor(sensor,atoi(&(dir->d_name[6])));
+			sensor->next = NULL;
 			if (last_sensor)
 				last_sensor->next = sensor;
 			else
@@ -415,4 +418,106 @@ ev3_sensor_ptr ev3_driver_sensor( ev3_sensor_ptr sensor, const char* driver)
 	if (was_open)
 		ev3_open_sensor(sensor);
 	return sensor;
+}
+
+int32_t __fbfd;
+unsigned char* __fbp = NULL;
+    
+void ev3_init_lcd()
+{
+	__fbfd = open("/dev/fb0", O_RDWR);
+	__fbp = (char*)mmap(0, EV3_SY_LCD, PROT_READ | PROT_WRITE, MAP_SHARED, __fbfd, 0);
+}
+
+void ev3_clear_lcd()
+{
+	memset(__fbp,0,EV3_SY_LCD);
+}
+
+#define EV3_PIXEL(x,y,bit) \
+if (bit) \
+	__fbp[(x >> 3) + (y) * EV3_S_LCD] |= 1 << (x & 7); \
+else \
+	__fbp[(x >> 3) + (y) * EV3_S_LCD] ^= 1 << (x & 7);
+	
+void ev3_pixel_lcd(int32_t x,int32_t y,int32_t bit)
+{
+	EV3_PIXEL(x,y,bit);
+}
+
+void ev3_circle_lcd(int32_t x,int32_t y,int32_t r,int32_t bit)
+{
+	int32_t a,b;
+	int32_t minx = x-r;
+	int32_t miny = y-r;
+	int32_t maxx = x+r;
+	int32_t maxy = y+r;
+	if (minx >= (int32_t)EV3_X_LCD)
+		return;
+	if (miny >= (int32_t)EV3_Y_LCD)
+		return;
+	if (maxx < 0)
+		return;
+	if (maxy < 0)
+		return;
+	if (minx < 0)
+		minx = 0;
+	if (miny < 0)
+		miny = 0;
+	if (maxx >= EV3_X_LCD)
+		maxx = EV3_X_LCD-1;
+	if (maxy >= EV3_Y_LCD)
+		maxy = EV3_Y_LCD-1;
+
+	if (bit)
+		for (a = minx; a <= maxx; a++)
+			for (b = miny; b <= maxy; b++)
+			{
+				if ((a-x)*(a-x) + (b-y)*(b-y) > r*r)
+					continue;
+				EV3_PIXEL(a,b,1);
+			}
+	else
+		for (a = minx; a <= maxx; a++)
+			for (b = miny; b <= maxy; b++)
+			{
+				if ((a-x)*(a-x) + (b-y)*(b-y) > r*r)
+					continue;
+				EV3_PIXEL(a,b,0);
+			}
+
+}
+
+void ev3_line_lcd(int32_t x0, int32_t y0, int32_t x1, int32_t y1,int32_t bit)
+{
+	int32_t dx =  abs(x1-x0), sx = x0<x1 ? 1 : -1;
+	int32_t dy = -abs(y1-y0), sy = y0<y1 ? 1 : -1;
+	int32_t err = dx+dy, e2;
+
+	if (bit)
+		for(;;)
+		{
+			if (x0 >= 0 && x0 < (int32_t)EV3_X_LCD && y0 >= 0 && y0 < (int32_t)EV3_Y_LCD)
+				EV3_PIXEL(x0,y0,1);
+			if (x0==x1 && y0==y1) break;
+			e2 = 2*err;
+			if (e2 > dy) { err += dy; x0 += sx; } /* e_xy+e_x > 0 */
+			if (e2 < dx) { err += dx; y0 += sy; } /* e_xy+e_y < 0 */
+		}
+	else
+		for(;;)
+		{
+			if (x0 >= 0 && x0 < (int32_t)EV3_X_LCD && y0 >= 0 && y0 < (int32_t)EV3_Y_LCD)
+				EV3_PIXEL(x0,y0,0);
+			if (x0==x1 && y0==y1) break;
+			e2 = 2*err;
+			if (e2 > dy) { err += dy; x0 += sx; } /* e_xy+e_x > 0 */
+			if (e2 < dx) { err += dx; y0 += sy; } /* e_xy+e_y < 0 */
+		}	
+}
+
+void ev3_quit_lcd()
+{
+	munmap(__fbp, EV3_SY_LCD);
+    close(__fbfd);
 }
