@@ -3,7 +3,7 @@ ifndef RANLIB
 	RANLIB = ranlib
 endif
 
-all: lib/ev3c.a bin/test_sensor
+all: lib/ev3c.a bin/test_sensor bin/test_motor
 
 obj/%.o: %.c ev3c.h Makefile
 	mkdir -p $(@D)
@@ -14,6 +14,10 @@ lib/ev3c.a: obj/ev3c.o
 	$(AR) rc $@ $^ && $(RANLIB) $@
 
 bin/test_sensor: test_sensor.c lib/ev3c.a
+	mkdir -p $(@D)
+	$(CC) -o $@ $< lib/ev3c.a $(CFLAGS)
+
+bin/test_motor: test_motor.c lib/ev3c.a
 	mkdir -p $(@D)
 	$(CC) -o $@ $< lib/ev3c.a $(CFLAGS)
 

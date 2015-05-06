@@ -1,3 +1,12 @@
+/*
+ The contents of this file are subject to the "do whatever you like"-license.
+ That means: Do, whatver you want, this file is under public domain. It is an
+ example for ev3c. Copy it and learn from it for your project and release
+ it under every license you want. ;-)
+ For feedback and questions about my Files and Projects please mail me,
+ Alexander Matthes (Ziz) , ziz_at_mailbox.org, http://github.com/theZiz
+*/
+
 #include "ev3c.h"
 
 #include <stdio.h>
@@ -23,7 +32,7 @@ int main(int argc,char** argv)
 		printf("==== %s ====\n",sensor->driver_name);
 		printf("ident: %i\n",sensor->driver_identifier);
 		printf("sensor: %i\n",sensor->sensor_nr);
-		printf("port: %i\n",sensor->port_nr);
+		printf("port: %i\n",sensor->port);
 		printf("bin_fd: %i\n",sensor->bin_fd);
 		printf("data count: %i\n",sensor->data_count);
 		printf("data format: %i\n",sensor->bin_data_format);
@@ -52,7 +61,7 @@ int main(int argc,char** argv)
 		{
 			ev3_update_sensor_bin(sensor);
 			ev3_update_sensor_val(sensor);
-			printf("%s [%i]: \n",sensor->driver_name,sensor->port_nr);
+			printf("%s [%i]: \n",sensor->driver_name,sensor->port);
 			int j;
 			for (j = 0; j < sensor->data_count;j++)
 				printf("\tvalue %i: %i (raw) - %i (formated)\n",j,sensor->bin_data[0].s32,sensor->val_data[0].s32);
