@@ -1009,6 +1009,43 @@ int32_t ev3_get_polarity( ev3_motor_ptr motor)
 // Buttons //
 /////////////
 
+#include <linux/input.h>
+
+int32_t __ev3_button_fd = -1;
+
+void ev3_init_button()
+{
+	__ev3_button_fd = open("/dev/input/by-path/platform-gpio-keys.0-event", O_RDONLY);
+}
+
+int32_t ev3_button_pressed(enum ev3_button_identifier button)
+{
+	uint8_t keys[96];
+	lseek(__ev3_button_fd,0,SEEK_SET);
+	ioctl (__ev3_button_fd, EVIOCGKEY(sizeof keys), &keys);
+	switch (button)
+	{
+		case BUTTON_LEFT:
+			return keys[KEY_LEFT >> 3] & (1 << (KEY_LEFT & 7))?0:1;
+		case BUTTON_UP:
+			return keys[KEY_UP >> 3] & (1 << (KEY_UP & 7))?0:1;
+		case BUTTON_RIGHT:
+			return keys[KEY_RIGHT >> 3] & (1 << (KEY_RIGHT & 7))?0:1;
+		case BUTTON_DOWN:
+			return keys[KEY_DOWN >> 3] & (1 << (KEY_DOWN & 7))?0:1;
+		case BUTTON_CENTER:
+			return keys[KEY_ENTER >> 3] & (1 << (KEY_ENTER & 7))?0:1;
+		case BUTTON_BACK:
+			return keys[KEY_BACKSPACE >> 3] & (1 << (KEY_BACKSPACE & 7))?0:1;
+	}
+	return 0;
+}
+
+void ev3_quit_button()
+{
+	close(__ev3_button_fd);
+}
+
 /////////
 // LCD //
 /////////
@@ -1217,6 +1254,62 @@ void ev3_rectangle_lcd(int32_t x,int32_t y,int32_t w,int32_t h,int32_t bit)
 				EV3_PIXEL_UNSET(a,b);
 }
 
+void ev3_rectangle_lcd_out(int32_t x,int32_t y,int32_t w,int32_t h,int32_t bit)
+{
+	int32_t a;
+	int32_t minx = x;
+	int32_t miny = y;
+	int32_t maxx = x+w;
+	int32_t maxy = y+h;
+	if (minx >= (int32_t)EV3_X_LCD)
+		return;
+	if (miny >= (int32_t)EV3_Y_LCD)
+		return;
+	if (maxx < 0)
+		return;
+	if (maxy < 0)
+		return;
+	if (minx < 0)
+		minx = 0;
+	if (miny < 0)
+		miny = 0;
+	if (maxx >= EV3_X_LCD)
+		maxx = EV3_X_LCD-1;
+	if (maxy >= EV3_Y_LCD)
+		maxy = EV3_Y_LCD-1;
+
+	if (bit)
+	{
+		if (y == miny)
+			for (a = minx; a <= maxx; a++)
+				EV3_PIXEL_SET(a,miny);
+		if (y+w == maxy)
+			for (a = minx; a <= maxx; a++)
+				EV3_PIXEL_SET(a,maxy);
+		if (x == minx)
+			for (a = miny+1; a <= maxy-1; a++)
+				EV3_PIXEL_SET(minx,a);
+		if (x+h == maxx)
+			for (a = miny+1; a <= maxy-1; a++)
+				EV3_PIXEL_SET(maxx,a);
+	}
+	else
+	{
+		if (y == miny)
+			for (a = minx; a <= maxx; a++)
+				EV3_PIXEL_UNSET(a,miny);
+		if (y+w == maxy)
+			for (a = minx; a <= maxx; a++)
+				EV3_PIXEL_UNSET(a,maxy);
+		if (x == minx)
+			for (a = miny+1; a <= maxy-1; a++)
+				EV3_PIXEL_UNSET(minx,a);
+		if (x+h == maxx)
+			for (a = miny+1; a <= maxy-1; a++)
+				EV3_PIXEL_UNSET(maxx,a);
+	}
+}
+
 void ev3_circle_lcd(int32_t x,int32_t y,int32_t r,int32_t bit)
 {
 	int32_t a,b;
@@ -1245,7 +1338,7 @@ void ev3_circle_lcd(int32_t x,int32_t y,int32_t r,int32_t bit)
 		for (a = minx; a <= maxx; a++)
 			for (b = miny; b <= maxy; b++)
 			{
-				if ((a-x)*(a-x) + (b-y)*(b-y) > r*r)
+				if ((a-x)*(a-x) + (b-y)*(b-y) >= r*r)
 					continue;
 				EV3_PIXEL_SET(a,b);
 			}
@@ -1253,10 +1346,87 @@ void ev3_circle_lcd(int32_t x,int32_t y,int32_t r,int32_t bit)
 		for (a = minx; a <= maxx; a++)
 			for (b = miny; b <= maxy; b++)
 			{
-				if ((a-x)*(a-x) + (b-y)*(b-y) > r*r)
+				if ((a-x)*(a-x) + (b-y)*(b-y) >= r*r)
 					continue;
 				EV3_PIXEL_UNSET(a,b);
 			}
+}
+
+#define MIRROR_PIXEL_SET(a,b) \
+{ \
+	if (y+b >= 0 && y+b < EV3_Y_LCD) \
+	{ \
+		if (x+a >= 0 && x+a < EV3_X_LCD) \
+			EV3_PIXEL_SET(x+a,y+b); \
+		if (x-a >= 0 && x-a < EV3_X_LCD) \
+			EV3_PIXEL_SET(x-a,y+b); \
+	} \
+	if (y-b >= 0 && y-b < EV3_Y_LCD) \
+	{ \
+		if (x+a >= 0 && x+a < EV3_X_LCD) \
+			EV3_PIXEL_SET(x+a,y-b); \
+		if (x-a >= 0 && x-a < EV3_X_LCD) \
+			EV3_PIXEL_SET(x-a,y-b); \
+	} \
+}
+#define MIRROR_PIXEL_UNSET(a,b) \
+{ \
+	if (y+b >= 0 && y+b < EV3_Y_LCD) \
+	{ \
+		if (x+a >= 0 && x+a < EV3_X_LCD) \
+			EV3_PIXEL_UNSET(x+a,y+b); \
+		if (x-a >= 0 && x-a < EV3_X_LCD) \
+			EV3_PIXEL_UNSET(x-a,y+b); \
+	} \
+	if (y-b >= 0 && y-b < EV3_Y_LCD) \
+	{ \
+		if (x+a >= 0 && x+a < EV3_X_LCD) \
+			EV3_PIXEL_UNSET(x+a,y-b); \
+		if (x-a >= 0 && x-a < EV3_X_LCD) \
+			EV3_PIXEL_UNSET(x-a,y-b); \
+	} \
+}
+
+void ev3_circle_lcd_out(int32_t x,int32_t y,int32_t r,int32_t bit)
+{
+	int32_t a,b;
+	if (bit)
+	{
+		a = r;
+		for (b = 0; b <= r; b++)
+		{
+			int once = 0;
+			while (a*a + b*b >= r*r)
+			{
+				once = 1;
+				a--;
+				MIRROR_PIXEL_SET(a,b)
+				if (a == 0)
+					break;
+			}
+			if (!once)
+				MIRROR_PIXEL_SET(a,b)
+		}
+	}
+	else
+	{
+		a = r;
+		for (b = 0; b <= r; b++)
+		{
+			int once = 0;
+			while (a*a + b*b >= r*r)
+			{
+				once = 1;
+				a--;
+				MIRROR_PIXEL_UNSET(a,b)
+				if (a == 0)
+					break;
+			}
+			if (!once)
+				MIRROR_PIXEL_UNSET(a,b)
+		}
+	}
+
 }
 
 void ev3_ellipse_lcd(int32_t x,int32_t y,int32_t rx,int32_t ry,int32_t bit)
@@ -1287,7 +1457,7 @@ void ev3_ellipse_lcd(int32_t x,int32_t y,int32_t rx,int32_t ry,int32_t bit)
 		for (a = minx; a <= maxx; a++)
 			for (b = miny; b <= maxy; b++)
 			{
-				if ((a-x)*(a-x)*ry*ry + (b-y)*(b-y)*rx*rx > rx*rx*ry*ry)
+				if ((a-x)*(a-x)*ry*ry + (b-y)*(b-y)*rx*rx >= rx*rx*ry*ry)
 					continue;
 				EV3_PIXEL_SET(a,b);
 			}
@@ -1295,10 +1465,52 @@ void ev3_ellipse_lcd(int32_t x,int32_t y,int32_t rx,int32_t ry,int32_t bit)
 		for (a = minx; a <= maxx; a++)
 			for (b = miny; b <= maxy; b++)
 			{
-				if ((a-x)*(a-x)*ry*ry + (b-y)*(b-y)*rx*rx > rx*rx*ry*ry)
+				if ((a-x)*(a-x)*ry*ry + (b-y)*(b-y)*rx*rx >= rx*rx*ry*ry)
 					continue;
 				EV3_PIXEL_UNSET(a,b);
 			}
+}
+
+void ev3_ellipse_lcd_out(int32_t x,int32_t y,int32_t rx,int32_t ry,int32_t bit)
+{
+	int32_t a,b;
+	if (bit)
+	{
+		a = rx;
+		for (b = 0; b <= ry; b++)
+		{
+			int once = 0;
+			while (a*a*ry*ry + b*b*rx*rx >= rx*rx*ry*ry)
+			{
+				once = 1;
+				a--;
+				MIRROR_PIXEL_SET(a,b)
+				if (a == 0)
+					break;
+			}
+			if (!once)
+				MIRROR_PIXEL_SET(a,b)
+		}
+	}
+	else
+	{
+		a = rx;
+		for (b = 0; b <= ry; b++)
+		{
+			int once = 0;
+			while (a*a*ry*ry + b*b*rx*rx >= rx*rx*ry*ry)
+			{
+				once = 1;
+				a--;
+				MIRROR_PIXEL_UNSET(a,b)
+				if (a == 0)
+					break;
+			}
+			if (!once)
+				MIRROR_PIXEL_UNSET(a,b)
+		}
+	}
+
 }
 
 void ev3_line_lcd(int32_t x0, int32_t y0, int32_t x1, int32_t y1,int32_t bit)

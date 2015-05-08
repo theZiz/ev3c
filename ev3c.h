@@ -788,6 +788,27 @@ ev3_motor_ptr ev3_set_polarity( ev3_motor_ptr motor, int32_t value);
  * int32_t - the polarity, 1 is normal, -1 is inverted*/
 int32_t ev3_get_polarity( ev3_motor_ptr motor);
 
+/* Section: Button
+ * 
+ * Some simple functions for drawing text and basic primitives to the
+ * lcd. */
+
+enum ev3_button_identifier
+{
+	BUTTON_LEFT,
+	BUTTON_UP,
+	BUTTON_RIGHT,
+	BUTTON_DOWN,
+	BUTTON_CENTER,
+	BUTTON_BACK
+};
+
+void ev3_init_button();
+
+int32_t ev3_button_pressed(enum ev3_button_identifier button);
+
+void ev3_quit_button();
+
 /* Section: LCD
  * 
  * Some simple functions for drawing text and basic primitives to the
@@ -797,7 +818,6 @@ int32_t ev3_get_polarity( ev3_motor_ptr motor);
 #define EV3_Y_LCD 128
 #define EV3_S_LCD 24
 #define EV3_SY_LCD (EV3_Y_LCD * EV3_S_LCD)
-
  
 void ev3_init_lcd();
 
@@ -813,9 +833,15 @@ void ev3_clear_lcd();
 
 void ev3_rectangle_lcd(int32_t x,int32_t y,int32_t w,int32_t h,int32_t bit);
 
+void ev3_rectangle_lcd_out(int32_t x,int32_t y,int32_t w,int32_t h,int32_t bit);
+
 void ev3_circle_lcd(int32_t x,int32_t y,int32_t r,int32_t bit);
 
+void ev3_circle_lcd_out(int32_t x,int32_t y,int32_t r,int32_t bit);
+
 void ev3_ellipse_lcd(int32_t x,int32_t y,int32_t rx,int32_t ry,int32_t bit);
+
+void ev3_ellipse_lcd_out(int32_t x,int32_t y,int32_t rx,int32_t ry,int32_t bit);
 
 void ev3_line_lcd(int32_t x0, int32_t y0, int32_t x1, int32_t y1,int32_t bit);
 
