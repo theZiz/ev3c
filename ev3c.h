@@ -775,7 +775,7 @@ int32_t ev3_motor_state( ev3_motor_ptr motor );
  * Parameter:
  * motor - (pointer of <ev3_motor>) motor to set the value
  * value - (int32_t) value to set. -1 means inverted, 1 is normal*/
-ev3_motor_ptr ev3_set_polarity( ev3_motor_ptr motor, int32_t value)
+ev3_motor_ptr ev3_set_polarity( ev3_motor_ptr motor, int32_t value);
 
 /* Function: ev3_get_polarity
  * 
@@ -801,9 +801,21 @@ int32_t ev3_get_polarity( ev3_motor_ptr motor);
  
 void ev3_init_lcd();
 
+void ev3_text_lcd_large(int32_t x,int32_t y,const char* text);
+
+void ev3_text_lcd_normal(int32_t x,int32_t y,const char* text);
+
+void ev3_text_lcd_small(int32_t x,int32_t y,const char* text);
+
+void ev3_text_lcd_tiny(int32_t x,int32_t y,const char* text);
+
 void ev3_clear_lcd();
 
+void ev3_rectangle_lcd(int32_t x,int32_t y,int32_t w,int32_t h,int32_t bit);
+
 void ev3_circle_lcd(int32_t x,int32_t y,int32_t r,int32_t bit);
+
+void ev3_ellipse_lcd(int32_t x,int32_t y,int32_t rx,int32_t ry,int32_t bit);
 
 void ev3_line_lcd(int32_t x0, int32_t y0, int32_t x1, int32_t y1,int32_t bit);
 
