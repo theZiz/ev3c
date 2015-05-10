@@ -5,11 +5,11 @@ endif
 
 all: lib/ev3c.a bin/test_sensor bin/test_motor bin/test_lcd bin/test_button
 
-obj/%.o: %.c ev3c.h Makefile
+obj/%.o: %.c %.h ev3c.h Makefile
 	mkdir -p $(@D)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-lib/ev3c.a: obj/ev3c.o
+lib/ev3c.a: obj/ev3c_core.o obj/ev3c_lcd.o obj/ev3c_sensor.o obj/ev3c_motor.o obj/ev3c_button.o
 	mkdir -p $(@D)
 	$(AR) rc $@ $^ && $(RANLIB) $@
 

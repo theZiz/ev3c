@@ -15,24 +15,17 @@
   * For feedback and questions about my Files and Projects please mail me,
   * Alexander Matthes (Ziz) , ziz_at_mailbox.org, http://github.com/theZiz */
 
-
-/* Title: ev3c
- * 
- * ev3c is a C wrapper library for interacting with the
- * - sensors
- * - motors
- * - leds
- * - buttons
- * - lcd and
- * - battery
- * of the Mindstorms EV3 brick using ev3dev.*/
-#ifndef __EV3C
-#define __EV3C
-
 #include "ev3c_core.h"
-#include "ev3c_sensor.h"
-#include "ev3c_motor.h"
-#include "ev3c_lcd.h"
-#include "ev3c_button.h"
 
-#endif
+int32_t ev3_read_file(char* file,char* buffer,int32_t size)
+{
+	int32_t fd = open(file,O_RDONLY);
+	if (fd < 0)
+		return fd;
+	int32_t c = read(fd,buffer,size);
+	if (c > 0)
+		c--;
+	buffer[c] = 0;
+	close(fd);
+	return 0;
+}
