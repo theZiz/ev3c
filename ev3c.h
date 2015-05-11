@@ -34,5 +34,6 @@
 #include "ev3c_motor.h"
 #include "ev3c_lcd.h"
 #include "ev3c_button.h"
+#include "ev3c_led.h"
 
 #endif

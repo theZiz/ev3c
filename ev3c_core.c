@@ -29,3 +29,13 @@ int32_t ev3_read_file(char* file,char* buffer,int32_t size)
 	close(fd);
 	return 0;
 }
+
+int32_t ev3_write_file(char* file,char* buffer,int32_t size)
+{
+	int32_t fd = open(file,O_WRONLY);
+	if (fd < 0)
+		return fd;
+	int32_t c = write(fd,buffer,size);
+	close(fd);
+	return 0;
+}

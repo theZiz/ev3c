@@ -17,6 +17,8 @@
   
 #include "ev3c_lcd.h"
 
+#include "linux/kd.h"
+
 #include "large_font.xbm"
 #define LARGE_FONT_PIXEL(x,y) ((large_font_bits[((x) >> 3) + (y) * 32 ] & (1 << ((x) & 7))) >> ((x) & 7))
 #define LARGE_LETTER_WIDTH 16
@@ -35,13 +37,15 @@
 #define TINY_FONT_WIDTH 8
 #define TINY_LETTER_HEIGHT 7
 
-int32_t __fbfd;
+int32_t __fbfd, __vtfd;
 unsigned char* __fbp = NULL;
-    
+
 void ev3_init_lcd()
 {
 	__fbfd = open("/dev/fb0", O_RDWR);
 	__fbp = (char*)mmap(0, EV3_SY_LCD, PROT_READ | PROT_WRITE, MAP_SHARED, __fbfd, 0);
+	__vtfd = open("/dev/tty", O_RDONLY);
+	ioctl(__vtfd, KDSETMODE, KD_GRAPHICS);
 }
 
 void ev3_clear_lcd()
@@ -512,4 +516,6 @@ void ev3_quit_lcd()
 {
 	munmap(__fbp, EV3_SY_LCD);
     close(__fbfd);
+	ioctl(__vtfd, KDSETMODE, KD_TEXT);
+	close(__vtfd);
 }

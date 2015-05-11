@@ -56,7 +56,20 @@ typedef char ev3_string[EV3_STRING_LENGTH];
  * size - (int32_t) size of the buffer
  * 
  * Returns:
- * int32_t - read bytes*/
+ * int32_t - 0 on sucess, else the error fd*/
 int32_t ev3_read_file(char* file,char* buffer,int32_t size);
+
+/* Function ev3_write_file
+ * 
+ * Writes the whole buffer to the file.
+ * 
+ * Parameter:
+ * file - (char*) file to write to
+ * buffer - (char*) buffer to read from
+ * size - (int32_t) size to write
+ * 
+ * Returns:
+ * int32_t - 0 on sucess, else the error fd*/
+int32_t ev3_write_file(char* file,char* buffer,int32_t size);
 
 #endif
