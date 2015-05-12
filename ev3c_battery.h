@@ -15,26 +15,31 @@
   * For feedback and questions about my Files and Projects please mail me,
   * Alexander Matthes (Ziz) , ziz_at_mailbox.org, http://github.com/theZiz */
 
-
-/* Title: ev3c
- * 
- * ev3c is a C wrapper library for interacting with the
- * - sensors
- * - motors
- * - leds
- * - buttons
- * - lcd and
- * - battery
- * of the Mindstorms EV3 brick using ev3dev.*/
-#ifndef __EV3C
-#define __EV3C
+#ifndef __EV3C_BATTERY
+#define __EV3C_BATTERY
 
 #include "ev3c_core.h"
-#include "ev3c_sensor.h"
-#include "ev3c_motor.h"
-#include "ev3c_lcd.h"
-#include "ev3c_button.h"
-#include "ev3c_led.h"
-#include "ev3c_battery.h"
+
+/* Title: ev3c_battery
+ * 
+ * Some functions for getting the state of the battery. It is not
+ * possible to give a percentage of the remaining energy, so only
+ * voltage and current are returned. However a voltage above 7 is good.*/
+
+/* Function: ev3c_current
+ * 
+ * Returns the current of the battery.
+ * 
+ * Returns:
+ * uint32_t - the current in mA*/
+uint32_t ev3c_current();
+
+/* Function: ev3c_voltage
+ * 
+ * Returns the voltage of the battery.
+ * 
+ * Returns:
+ * uint32_t - the voltage in µV*/
+uint32_t ev3c_voltage();
 
 #endif
