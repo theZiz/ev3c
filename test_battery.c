@@ -14,8 +14,8 @@
 int main(int argc,char** argv)
 {
 	int c = ev3c_current();
-	printf("EV3 battery current: %i.%i A\n",c/1000,c%1000);
+	printf("EV3 battery current: %i.%i mA\n",c/1000,c%1000);
 	int v = ev3c_voltage();
-	printf("EV3 battery voltage: %i.%i V\n",v/1000000,v%1000000);
+	printf("EV3 battery voltage: %i.%i mV\n",v/1000,v%1000);
 	return 0;
 }

@@ -31,7 +31,7 @@
  * Returns the current of the battery.
  * 
  * Returns:
- * uint32_t - the current in mA*/
+ * uint32_t - the current in µA*/
 uint32_t ev3c_current();
 
 /* Function: ev3c_voltage
