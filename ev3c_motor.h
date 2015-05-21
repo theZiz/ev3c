@@ -456,7 +456,7 @@ int32_t ev3_motor_state( ev3_motor_ptr motor );
  * 
  * Parameter:
  * motor - (pointer of <ev3_motor>) motor to set the value
- * value - (int32_t) value to set. -1 means inverted, 1 is normal*/
+ * value - (int32_t) value to set. -1 means inversed, 1 is normal*/
 ev3_motor_ptr ev3_set_polarity( ev3_motor_ptr motor, int32_t value);
 
 /* Function: ev3_get_polarity
@@ -467,7 +467,7 @@ ev3_motor_ptr ev3_set_polarity( ev3_motor_ptr motor, int32_t value);
  * motor - (pointer of <ev3_motor>) motor to get the value from
  * 
  * Returns:
- * int32_t - the polarity, 1 is normal, -1 is inverted*/
+ * int32_t - the polarity, 1 is normal, -1 is inversed*/
 int32_t ev3_get_polarity( ev3_motor_ptr motor);
 
 #endif

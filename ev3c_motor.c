@@ -546,7 +546,7 @@ ev3_motor_ptr ev3_set_polarity( ev3_motor_ptr motor, int32_t value)
 		return;
 	int32_t l;
 	if (value == -1)
-		l = write(motor->time_sp_fd,"inverted",strlen("inverted"));
+		l = write(motor->time_sp_fd,"inversed",strlen("inversed"));
 	else
 	if (value == 1)
 		l = write(motor->time_sp_fd,"normal",strlen("normal"));
@@ -559,7 +559,7 @@ int32_t ev3_get_polarity( ev3_motor_ptr motor)
 	char file[1024];
 	sprintf(file,"/sys/class/tacho-motor/motor%i/polarity",motor->motor_nr);
 	ev3_read_file(file,file,1024);
-	if (strcmp(file,"inverted") == 0)
+	if (strcmp(file,"inversed") == 0)
 		return -1;
 	return 1;
 }
