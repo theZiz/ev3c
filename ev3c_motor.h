@@ -114,6 +114,7 @@ typedef struct ev3_motor_struct
 	int32_t ramp_up_sp_fd;
 	int32_t ramp_down_sp_fd;
 	int32_t time_sp_fd;
+	FILE* command_stream;
 	ev3_string commands[16];
 	int32_t command_count;
 	ev3_string stop_commands[16];

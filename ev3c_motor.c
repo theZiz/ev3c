@@ -49,6 +49,7 @@ void load_motor( ev3_motor_ptr motor, int32_t nr)
 	motor->ramp_up_sp_fd = -1;
 	motor->ramp_down_sp_fd = -1;
 	motor->time_sp_fd = -1;
+	motor->command_stream = NULL;
 	sprintf(file,"/sys/class/tacho-motor/motor%i/commands",nr);
 	ev3_read_file(file,file,1024);
 	motor->command_count = 0;
@@ -186,6 +187,12 @@ ev3_motor_ptr ev3_open_motor( ev3_motor_ptr motor )
 		sprintf(file,"/sys/class/tacho-motor/motor%i/time_sp",motor->motor_nr);
 		motor->time_sp_fd = open(file,O_RDWR);
 	}
+	if (motor->command_stream == NULL)
+	{
+		char filename[1024];
+		sprintf(filename,"/sys/class/tacho-motor/motor%i/command", motor->motor_nr);
+		motor->command_stream = fopen(filename, "w");
+	}
 	return motor;
 }
 
@@ -267,6 +274,11 @@ void ev3_close_motor( ev3_motor_ptr motor )
 		close(motor->time_sp_fd);
 		motor->time_sp_fd = -1;
 	}
+	if (motor->command_stream != NULL)
+	{
+		fclose(motor->command_stream);
+		motor->command_stream = NULL;
+	}
 }
 
 ev3_motor_ptr ev3_command_motor( ev3_motor_ptr motor, int32_t command)
@@ -277,12 +289,13 @@ ev3_motor_ptr ev3_command_motor( ev3_motor_ptr motor, int32_t command)
 		return motor;
 	if (command >= motor->command_count)
 		return motor;
-	char file[1024];
-	sprintf(file,"/sys/class/tacho-motor/motor%i/command",motor->motor_nr);
-	int32_t fd = open(file,O_WRONLY);
-	int32_t l = strlen(motor->commands[command]);
-	int32_t r = write(fd,motor->commands[command],l);
-	close(fd);
+
+	fwrite(motor->commands[command],
+	       strlen(motor->commands[command]),
+	       1,
+	       motor->command_stream);
+
+	fflush(motor->command_stream);
 	return motor;
 }
 
