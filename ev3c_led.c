@@ -21,14 +21,14 @@ int32_t __ev3_led_fd[4] = {-1,-1,-1,-1};
 
 void ev3_init_led()
 {
-	ev3_write_file("/sys/class/leds/ev3-left1:green:ev3dev/trigger","none",4);
-	ev3_write_file("/sys/class/leds/ev3-left0:red:ev3dev/trigger","none",4);
-	ev3_write_file("/sys/class/leds/ev3-right1:green:ev3dev/trigger","none",4);
-	ev3_write_file("/sys/class/leds/ev3-right0:red:ev3dev/trigger","none",4);
-	__ev3_led_fd[0] = open("/sys/class/leds/ev3-left1:green:ev3dev/brightness", O_RDWR);
-	__ev3_led_fd[1] = open("/sys/class/leds/ev3-left0:red:ev3dev/brightness", O_RDWR);
-	__ev3_led_fd[2] = open("/sys/class/leds/ev3-right1:green:ev3dev/brightness", O_RDWR);
-	__ev3_led_fd[3] = open("/sys/class/leds/ev3-right0:red:ev3dev/brightness", O_RDWR);
+	ev3_write_file("/sys/class/leds/ev3:left:green:ev3dev/trigger","none",4);
+	ev3_write_file("/sys/class/leds/ev3:left:red:ev3dev/trigger","none",4);
+	ev3_write_file("/sys/class/leds/ev3:right:green:ev3dev/trigger","none",4);
+	ev3_write_file("/sys/class/leds/ev3:right:red:ev3dev/trigger","none",4);
+	__ev3_led_fd[0] = open("/sys/class/leds/ev3:left:green:ev3dev/brightness", O_RDWR);
+	__ev3_led_fd[1] = open("/sys/class/leds/ev3:left:red:ev3dev/brightness", O_RDWR);
+	__ev3_led_fd[2] = open("/sys/class/leds/ev3:right:green:ev3dev/brightness", O_RDWR);
+	__ev3_led_fd[3] = open("/sys/class/leds/ev3:right:red:ev3dev/brightness", O_RDWR);
 }
 
 void ev3_set_led(enum ev3_led_name led,enum ev3_led_color color,int32_t value)
