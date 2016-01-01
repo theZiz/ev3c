@@ -135,7 +135,7 @@ void load_sensor( ev3_sensor_ptr sensor, int32_t nr)
 	sprintf(file,"/sys/class/lego-sensor/sensor%i/driver_name",nr);
 	ev3_read_file(file,sensor->driver_name,EV3_STRING_LENGTH);
 	sensor->driver_identifier = get_sensor_identifier(sensor->driver_name);
-	sprintf(file,"/sys/class/lego-sensor/sensor%i/port_name",nr);
+	sprintf(file,"/sys/class/lego-sensor/sensor%i/address",nr);
 	ev3_read_file(file,buffer,EV3_STRING_LENGTH);
 	sensor->port = atoi(&buffer[2]);
 	sensor->sensor_nr = nr;

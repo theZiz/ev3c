@@ -30,13 +30,15 @@ enum ev3_motor_identifier get_motor_identifier(char* buffer)
 
 void load_motor( ev3_motor_ptr motor, int32_t nr)
 {
+	if (motor == NULL)
+		return;
 	ev3_string buffer;
 	char file[1024];
 	//loading the struct with some initial values
 	sprintf(file,"/sys/class/tacho-motor/motor%i/driver_name",nr);
 	ev3_read_file(file,motor->driver_name,EV3_STRING_LENGTH);
 	motor->driver_identifier = get_motor_identifier(motor->driver_name);
-	sprintf(file,"/sys/class/tacho-motor/motor%i/port_name",nr);
+	sprintf(file,"/sys/class/tacho-motor/motor%i/address",nr);
 	ev3_read_file(file,buffer,EV3_STRING_LENGTH);
 	motor->port = buffer[3];
 	motor->motor_nr = nr;
@@ -365,6 +367,8 @@ ev3_motor_ptr ev3_reset_motor( ev3_motor_ptr motor)
 
 void set_speed_regulation( ev3_motor_ptr motor, int32_t on)
 {
+	if (motor == NULL)
+		return;
 	if (motor->speed_regulation == on)
 		return;
 	char file[1024];
@@ -383,6 +387,8 @@ void set_speed_regulation( ev3_motor_ptr motor, int32_t on)
 
 int32_t ev3_get_duty_cycle( ev3_motor_ptr motor)
 {
+	if (motor == NULL)
+		return 0;
 	char buffer[32];
 	lseek(motor->duty_cycle_fd,0,SEEK_SET);
 	buffer[read(motor->duty_cycle_fd,buffer,32)] = 0;
@@ -391,6 +397,8 @@ int32_t ev3_get_duty_cycle( ev3_motor_ptr motor)
 
 ev3_motor_ptr ev3_set_duty_cycle_sp( ev3_motor_ptr motor, int32_t value)
 {
+	if (motor == NULL)
+		return NULL;
 	set_speed_regulation( motor, 0 );
 	char buffer[32];
 	sprintf(buffer,"%i",value);
@@ -401,6 +409,8 @@ ev3_motor_ptr ev3_set_duty_cycle_sp( ev3_motor_ptr motor, int32_t value)
 
 int32_t ev3_get_duty_cycle_sp( ev3_motor_ptr motor)
 {
+	if (motor == NULL)
+		return 0;
 	char buffer[32];
 	lseek(motor->duty_cycle_sp_fd,0,SEEK_SET);
 	buffer[read(motor->duty_cycle_sp_fd,buffer,32)] = 0;
@@ -409,6 +419,8 @@ int32_t ev3_get_duty_cycle_sp( ev3_motor_ptr motor)
 
 int32_t ev3_get_speed( ev3_motor_ptr motor)
 {
+	if (motor == NULL)
+		return 0;
 	char buffer[32];
 	lseek(motor->speed_fd,0,SEEK_SET);
 	buffer[read(motor->speed_fd,buffer,32)] = 0;
@@ -417,6 +429,8 @@ int32_t ev3_get_speed( ev3_motor_ptr motor)
 
 ev3_motor_ptr ev3_set_speed_sp( ev3_motor_ptr motor, int32_t value)
 {
+	if (motor == NULL)
+		return NULL;
 	set_speed_regulation( motor, 1 );
 	char buffer[32];
 	sprintf(buffer,"%i",value);
@@ -427,6 +441,8 @@ ev3_motor_ptr ev3_set_speed_sp( ev3_motor_ptr motor, int32_t value)
 
 int32_t ev3_get_speed_sp( ev3_motor_ptr motor)
 {
+	if (motor == NULL)
+		return 0;
 	char buffer[32];
 	lseek(motor->speed_sp_fd,0,SEEK_SET);
 	buffer[read(motor->speed_sp_fd,buffer,32)] = 0;
@@ -435,6 +451,8 @@ int32_t ev3_get_speed_sp( ev3_motor_ptr motor)
 
 ev3_motor_ptr ev3_set_position( ev3_motor_ptr motor, int32_t value)
 {
+	if (motor == NULL)
+		return NULL;
 	char buffer[32];
 	sprintf(buffer,"%i",value);
 	lseek(motor->position_fd,0,SEEK_SET);
@@ -444,6 +462,8 @@ ev3_motor_ptr ev3_set_position( ev3_motor_ptr motor, int32_t value)
 
 int32_t ev3_get_position( ev3_motor_ptr motor)
 {
+	if (motor == NULL)
+		return 0;
 	char buffer[32];
 	lseek(motor->position_fd,0,SEEK_SET);
 	buffer[read(motor->position_fd,buffer,32)] = 0;
@@ -452,6 +472,8 @@ int32_t ev3_get_position( ev3_motor_ptr motor)
 
 ev3_motor_ptr ev3_set_position_sp( ev3_motor_ptr motor, int32_t value)
 {
+	if (motor == NULL)
+		return NULL;
 	char buffer[32];
 	sprintf(buffer,"%i",value);
 	lseek(motor->position_sp_fd,0,SEEK_SET);
@@ -461,6 +483,8 @@ ev3_motor_ptr ev3_set_position_sp( ev3_motor_ptr motor, int32_t value)
 
 int32_t ev3_get_position_sp( ev3_motor_ptr motor)
 {
+	if (motor == NULL)
+		return 0;
 	char buffer[32];
 	lseek(motor->position_sp_fd,0,SEEK_SET);
 	buffer[read(motor->position_sp_fd,buffer,32)] = 0;
@@ -469,6 +493,8 @@ int32_t ev3_get_position_sp( ev3_motor_ptr motor)
 
 ev3_motor_ptr ev3_set_ramp_up_sp( ev3_motor_ptr motor, int32_t value)
 {
+	if (motor == NULL)
+		return NULL;
 	char buffer[32];
 	sprintf(buffer,"%i",value);
 	lseek(motor->ramp_up_sp_fd,0,SEEK_SET);
@@ -478,6 +504,8 @@ ev3_motor_ptr ev3_set_ramp_up_sp( ev3_motor_ptr motor, int32_t value)
 
 int32_t ev3_get_ramp_up_sp( ev3_motor_ptr motor)
 {
+	if (motor == NULL)
+		return 0;
 	char buffer[32];
 	lseek(motor->ramp_up_sp_fd,0,SEEK_SET);
 	buffer[read(motor->ramp_up_sp_fd,buffer,32)] = 0;
@@ -486,6 +514,8 @@ int32_t ev3_get_ramp_up_sp( ev3_motor_ptr motor)
 
 ev3_motor_ptr ev3_set_ramp_down_sp( ev3_motor_ptr motor, int32_t value)
 {
+	if (motor == NULL)
+		return NULL;
 	char buffer[32];
 	sprintf(buffer,"%i",value);
 	lseek(motor->ramp_down_sp_fd,0,SEEK_SET);
@@ -495,6 +525,8 @@ ev3_motor_ptr ev3_set_ramp_down_sp( ev3_motor_ptr motor, int32_t value)
 
 int32_t ev3_get_ramp_down_sp( ev3_motor_ptr motor)
 {
+	if (motor == NULL)
+		return 0;
 	char buffer[32];
 	lseek(motor->ramp_down_sp_fd,0,SEEK_SET);
 	buffer[read(motor->ramp_down_sp_fd,buffer,32)] = 0;
@@ -503,6 +535,8 @@ int32_t ev3_get_ramp_down_sp( ev3_motor_ptr motor)
 
 ev3_motor_ptr ev3_set_time_sp( ev3_motor_ptr motor, int32_t value)
 {
+	if (motor == NULL)
+		return NULL;
 	char buffer[32];
 	sprintf(buffer,"%i",value);
 	lseek(motor->time_sp_fd,0,SEEK_SET);
@@ -512,6 +546,8 @@ ev3_motor_ptr ev3_set_time_sp( ev3_motor_ptr motor, int32_t value)
 
 int32_t ev3_get_time_sp( ev3_motor_ptr motor)
 {
+	if (motor == NULL)
+		return 0;
 	char buffer[32];
 	lseek(motor->time_sp_fd,0,SEEK_SET);
 	buffer[read(motor->time_sp_fd,buffer,32)] = 0;
@@ -520,6 +556,8 @@ int32_t ev3_get_time_sp( ev3_motor_ptr motor)
 
 int32_t ev3_motor_state( ev3_motor_ptr motor )
 {
+	if (motor == NULL)
+		return 0;
 	char file[1024];
 	sprintf(file,"/sys/class/tacho-motor/motor%i/state",motor->motor_nr);
 	ev3_read_file(file,file,1024);
@@ -552,6 +590,8 @@ int32_t ev3_motor_state( ev3_motor_ptr motor )
 
 ev3_motor_ptr ev3_set_polarity( ev3_motor_ptr motor, int32_t value)
 {
+	if (motor == NULL)
+		return NULL;
 	char file[1024];
 	sprintf(file,"/sys/class/tacho-motor/motor%i/polarity",motor->motor_nr);
 	int32_t fd = open(file,O_WRONLY);
@@ -569,6 +609,8 @@ ev3_motor_ptr ev3_set_polarity( ev3_motor_ptr motor, int32_t value)
 
 int32_t ev3_get_polarity( ev3_motor_ptr motor)
 {
+	if (motor == NULL)
+		return 0;
 	char file[1024];
 	sprintf(file,"/sys/class/tacho-motor/motor%i/polarity",motor->motor_nr);
 	ev3_read_file(file,file,1024);
