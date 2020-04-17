@@ -22,7 +22,7 @@ int main(int argc,char** argv)
 	//connected the values will be interpreted as sound values. Adjust
 	//this line in that case.
 	ev3_driver_sensor(
-		ev3_search_sensor_by_identifier( sensors, NXT_ANALOG, 0 ),
+		ev3_search_sensor_by_name( sensors, "nxt-analog", 0 ),
 		"lego-nxt-sound"
 	);
 	//Interating over the sensors and printing some interesting data
@@ -30,7 +30,6 @@ int main(int argc,char** argv)
 	while (sensor)
 	{
 		printf("==== %s ====\n",sensor->driver_name);
-		printf("ident: %i\n",sensor->driver_identifier);
 		printf("sensor: %i\n",sensor->sensor_nr);
 		printf("port: %i\n",sensor->port);
 		printf("bin_fd: %i\n",sensor->bin_fd);
@@ -46,7 +45,10 @@ int main(int argc,char** argv)
 		//If there is more than one mode, let's choose the second one.
 		if (sensor->mode_count > 1)
 			ev3_mode_sensor(sensor,1);
-		
+		//Or even the fourth one!
+		if (sensor->mode_count > 3)
+			ev3_mode_sensor(sensor,3);
+
 		//Let's open the sensors ;)
 		ev3_open_sensor(sensor);
 		sensor = sensor->next;
@@ -64,7 +66,7 @@ int main(int argc,char** argv)
 			printf("%s [%i]: \n",sensor->driver_name,sensor->port);
 			int j;
 			for (j = 0; j < sensor->data_count;j++)
-				printf("\tvalue %i: %i (raw) - %i (formated)\n",j,sensor->bin_data[0].s32,sensor->val_data[0].s32);
+				printf("\tvalue %i: %i (raw) - %i (formated)\n",j,sensor->bin_data[j].s32,sensor->val_data[j].s32);
 			sensor = sensor->next;
 		}
 		sleep(1);

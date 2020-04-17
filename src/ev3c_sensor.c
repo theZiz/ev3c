@@ -3,15 +3,15 @@
   * it under the terms of the GNU General Public License as published by
   * the Free Software Foundation, either version 2 of the License, or
   * (at your option) any later version.
-  * 
+  *
   * Ev3c is distributed in the hope that it will be useful,
   * but WITHOUT ANY WARRANTY; without even the implied warranty of
   * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   * GNU General Public License for more details.
-  * 
+  *
   * You should have received a copy of the GNU General Public License
   * along with ev3c.  If not, see <http://www.gnu.org/licenses/>
-  * 
+  *
   * For feedback and questions about my Files and Projects please mail me,
   * Alexander Matthes (Ziz) , ziz_at_mailbox.org, http://github.com/theZiz */
 
@@ -36,97 +36,6 @@ enum ev3_bin_data_format_enum get_data_format(char* buffer)
 	return S32;
 }
 
-enum ev3_sensor_identifier get_sensor_identifier(char* buffer)
-{
-	if (strcmp(buffer,"ev3-analog-xx") == 0)
-		return EV3_ANALOG_XX;
-	if (strcmp(buffer,"nxt-analog") == 0)
-		return NXT_ANALOG;
-	if (strcmp(buffer,"ht-nxt-color") == 0)
-		return HT_NXT_COLOR;
-	if (strcmp(buffer,"ht-nxt-angle") == 0)
-		return HT_NXT_ANGLE;
-	if (strcmp(buffer,"ht-nxt-accel") == 0)
-		return HT_NXT_ACCEL;
-	if (strcmp(buffer,"ht-nxt-barometric") == 0)
-		return HT_NXT_BAROMETRIC;
-	if (strcmp(buffer,"ht-nxt-color-v2") == 0)
-		return HT_NXT_COLOR_V2;
-	if (strcmp(buffer,"ht-nxt-eopd") == 0)
-		return HT_NXT_EOPD;
-	if (strcmp(buffer,"ht-nxt-force") == 0)
-		return HT_NXT_FORCE;
-	if (strcmp(buffer,"ht-nxt-gyro") == 0)
-		return HT_NXT_GYRO;
-	if (strcmp(buffer,"ht-nxt-ir-link") == 0)
-		return HT_NXT_IR_LINK;
-	if (strcmp(buffer,"ht-nxt-ir-receiver") == 0)
-		return HT_NXT_IR_RECEIVER;
-	if (strcmp(buffer,"ht-nxt-pir") == 0)
-		return HT_NXT_PIR;
-	if (strcmp(buffer,"ht-nxt-compass") == 0)
-		return HT_NXT_COMPASS;
-	if (strcmp(buffer,"ht-nxt-mag") == 0)
-		return HT_NXT_MAG;
-	if (strcmp(buffer,"ht-nxt-seek-v2") == 0)
-		return HT_NXT_IR_SEEK_V2;
-	if (strcmp(buffer,"ht-nxt-smux") == 0)
-		return HT_NXT_SMUX;
-	if (strcmp(buffer,"ht-super-pro") == 0)
-		return HT_SUPER_PRO;
-	if (strcmp(buffer,"lego-ev3-uart-30") == 0)
-		return LEGO_EV3_UART_30;
-	if (strcmp(buffer,"lego-ev3-uart-32") == 0)
-		return LEGO_EV3_UART_32;
-	if (strcmp(buffer,"lego-ev3-uart-29") == 0)
-		return LEGO_EV3_UART_29;
-	if (strcmp(buffer,"lego-ev3-touch") == 0)
-		return LEGO_EV3_TOUCH;
-	if (strcmp(buffer,"lego-ev3-uart-33") == 0)
-		return LEGO_EV3_UART_33;
-	if (strcmp(buffer,"wedo-hub") == 0)
-		return WEDO_HUB;
-	if (strcmp(buffer,"wedo-motion") == 0)
-		return WEDO_MOTION;
-	if (strcmp(buffer,"wedo-tilt") == 0)
-		return WEDO_TILT;
-	if (strcmp(buffer,"lego-power-storage") == 0)
-		return LEGO_POWER_STORAGE;
-	if (strcmp(buffer,"tmp275") == 0)
-		return TMP275;
-	if (strcmp(buffer,"lego-nxt-touch") == 0)
-		return LEGO_NXT_TOUCH;
-	if (strcmp(buffer,"lego-nxt-light") == 0)
-		return LEGO_NXT_LIGHT;
-	if (strcmp(buffer,"lego-nxt-sound") == 0)
-		return LEGO_NXT_SOUND;
-	if (strcmp(buffer,"lego-next-us") == 0)
-		return LEGO_NXT_US;
-	if (strcmp(buffer,"mi-xg1300l") == 0)
-		return MI_XG1300L;
-	if (strcmp(buffer,"ms-absolute-imu") == 0)
-		return MS_ABSOLUTE_IMU;
-	if (strcmp(buffer,"ms-angle") == 0)
-		return MS_ANGLE;
-	if (strcmp(buffer,"ms-ev3-smux") == 0)
-		return MS_EV3_SMUX;
-	if (strcmp(buffer,"ms-light-array") == 0)
-		return MS_LIGHT_ARRAY;
-	if (strcmp(buffer,"ms-line-leader") == 0)
-		return MS_LINE_LEADER;
-	if (strcmp(buffer,"ms-8ch-servo") == 0)
-		return MS_8CH_SERVO;
-	if (strcmp(buffer,"pcf8574") == 0)
-		return PCF8574;
-	if (strcmp(buffer,"pcf8591") == 0)
-		return PCF8591;
-	if (strcmp(buffer,"ds1307") == 0)
-		return DS1307;
-	if (strcmp(buffer,"ms-nxt-touch-mux") == 0)
-		return MS_NXT_TOUCH_MUX;
-	return UNKNOWN_SENSOR;
-}
-
 void load_sensor( ev3_sensor_ptr sensor, int32_t nr)
 {
 	ev3_string buffer;
@@ -134,10 +43,9 @@ void load_sensor( ev3_sensor_ptr sensor, int32_t nr)
 	//loading the struct with some initial values
 	sprintf(file,"/sys/class/lego-sensor/sensor%i/driver_name",nr);
 	ev3_read_file(file,sensor->driver_name,EV3_STRING_LENGTH);
-	sensor->driver_identifier = get_sensor_identifier(sensor->driver_name);
 	sprintf(file,"/sys/class/lego-sensor/sensor%i/address",nr);
 	ev3_read_file(file,buffer,EV3_STRING_LENGTH);
-	sensor->port = atoi(&buffer[2]);
+	sensor->port = atoi(&buffer[12]); //ev3-ports:inX
 	sensor->sensor_nr = nr;
 	sensor->bin_fd = -1;
 	int32_t i;
@@ -179,7 +87,7 @@ void load_sensor( ev3_sensor_ptr sensor, int32_t nr)
 	ev3_read_file(file,buffer,EV3_STRING_LENGTH);
 	for (sensor->mode = 0; sensor->mode < sensor->mode_count; sensor->mode++)
 		if (strcmp(sensor->modes[sensor->mode],buffer) == 0)
-			break;	
+			break;
 }
 
 ev3_sensor_ptr ev3_load_sensors( void )
@@ -206,7 +114,7 @@ ev3_sensor_ptr ev3_load_sensors( void )
 			last_sensor = sensor;
 		}
 		closedir(d);
-	}	
+	}
 	return first_sensor;
 }
 
@@ -242,12 +150,12 @@ ev3_sensor_ptr ev3_open_sensor( ev3_sensor_ptr sensor )
 	return sensor;
 }
 
-ev3_sensor_ptr ev3_search_sensor_by_identifier( ev3_sensor_ptr sensors, enum ev3_sensor_identifier identifier, int32_t not_ready)
+ev3_sensor_ptr ev3_search_sensor_by_name( ev3_sensor_ptr sensors, char* name, int32_t not_ready)
 {
 	ev3_sensor_ptr sensor = sensors;
 	while (sensor)
 	{
-		if (sensor->driver_identifier == identifier)
+		if ( strcmp(sensor->driver_name,name) == 0 )
 		{
 			if (not_ready == 0)
 				return sensor;
@@ -401,7 +309,7 @@ ev3_sensor_ptr ev3_driver_sensor( ev3_sensor_ptr sensor, const char* driver)
 	close(fd);
 	if (l == r)
 	{
-		sprintf(file,"/sys/class/lego-port/port%i/in%i:%s/lego-sensor",sensor->port-1,sensor->port,driver);
+		sprintf(file,"/sys/class/lego-port/port%i/ev3-ports:in%i:%s/lego-sensor",sensor->port-1,sensor->port,driver);
 		DIR *d;
 		struct dirent *dir;
 		d = opendir(file);
@@ -417,7 +325,7 @@ ev3_sensor_ptr ev3_driver_sensor( ev3_sensor_ptr sensor, const char* driver)
 			}
 			nr = atoi(&(dir->d_name[6]));
 			closedir(d);
-		}			
+		}
 		load_sensor( sensor, nr);
 	}
 	if (was_open)

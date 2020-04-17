@@ -3,21 +3,22 @@
   * it under the terms of the GNU General Public License as published by
   * the Free Software Foundation, either version 2 of the License, or
   * (at your option) any later version.
-  * 
+  *
   * Ev3c is distributed in the hope that it will be useful,
   * but WITHOUT ANY WARRANTY; without even the implied warranty of
   * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   * GNU General Public License for more details.
-  * 
+  *
   * You should have received a copy of the GNU General Public License
   * along with ev3c.  If not, see <http://www.gnu.org/licenses/>
-  * 
+  *
   * For feedback and questions about my Files and Projects please mail me,
   * Alexander Matthes (Ziz) , ziz_at_mailbox.org, http://github.com/theZiz */
-  
+
 #include "ev3c_lcd.h"
 
 #include "linux/kd.h"
+#include <stdint.h>
 
 #include "large_font.xbm"
 #define LARGE_FONT_PIXEL(x,y) ((large_font_bits[((x) >> 3) + (y) * 32 ] & (1 << ((x) & 7))) >> ((x) & 7))
@@ -38,23 +39,23 @@
 #define TINY_LETTER_HEIGHT 7
 
 int32_t __fbfd, __vtfd;
-unsigned char* __fbp = NULL;
+uint32_t* __fbp = NULL;
 
 void ev3_init_lcd()
 {
 	__fbfd = open("/dev/fb0", O_RDWR);
-	__fbp = (char*)mmap(0, EV3_SY_LCD, PROT_READ | PROT_WRITE, MAP_SHARED, __fbfd, 0);
+	__fbp = (uint32_t*)mmap(0, EV3_SY_LCD, PROT_READ | PROT_WRITE, MAP_SHARED, __fbfd, 0);
 	__vtfd = open("/dev/tty", O_RDONLY);
 	ioctl(__vtfd, KDSETMODE, KD_GRAPHICS);
 }
 
 void ev3_clear_lcd()
 {
-	memset(__fbp,0,EV3_SY_LCD);
+	memset(__fbp,255,EV3_SY_LCD);
 }
 
-#define EV3_PIXEL_SET(x,y) __fbp[((x) >> 3) + (y) * EV3_S_LCD] |= 1 << ((x) & 7)
-#define EV3_PIXEL_UNSET(x,y) __fbp[((x) >> 3) + (y) * EV3_S_LCD] &= 0xFF ^ (1 << ((x) & 7))
+#define EV3_PIXEL_SET(x,y) __fbp[ (x) + (y) * (EV3_S_LCD/(EV3_BPP_LCD/8))] = 0x00000000
+#define EV3_PIXEL_UNSET(x,y) __fbp[ (x) + (y) * (EV3_S_LCD/(EV3_BPP_LCD/8))] = 0xffffffff
 
 #define EV3_PIXEL(x,y,bit) {if (bit) EV3_PIXEL_SET(x,y); else EV3_PIXEL_UNSET(x,y);}
 
@@ -509,7 +510,7 @@ void ev3_line_lcd(int32_t x0, int32_t y0, int32_t x1, int32_t y1,int32_t bit)
 			e2 = 2*err;
 			if (e2 > dy) { err += dy; x0 += sx; } /* e_xy+e_x > 0 */
 			if (e2 < dx) { err += dx; y0 += sy; } /* e_xy+e_y < 0 */
-		}	
+		}
 }
 
 void ev3_quit_lcd()

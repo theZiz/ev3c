@@ -3,18 +3,18 @@
   * it under the terms of the GNU General Public License as published by
   * the Free Software Foundation, either version 2 of the License, or
   * (at your option) any later version.
-  * 
+  *
   * Ev3c is distributed in the hope that it will be useful,
   * but WITHOUT ANY WARRANTY; without even the implied warranty of
   * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   * GNU General Public License for more details.
-  * 
+  *
   * You should have received a copy of the GNU General Public License
   * along with ev3c.  If not, see <http://www.gnu.org/licenses/>
-  * 
+  *
   * For feedback and questions about my Files and Projects please mail me,
   * Alexander Matthes (Ziz) , ziz_at_mailbox.org, http://github.com/theZiz */
-  
+
 #include "ev3c_motor.h"
 
 enum ev3_motor_identifier get_motor_identifier(char* buffer)
@@ -40,7 +40,7 @@ void load_motor( ev3_motor_ptr motor, int32_t nr)
 	motor->driver_identifier = get_motor_identifier(motor->driver_name);
 	sprintf(file,"/sys/class/tacho-motor/motor%i/address",nr);
 	ev3_read_file(file,buffer,EV3_STRING_LENGTH);
-	motor->port = buffer[3];
+	motor->port = buffer[13]; //ev3-ports:outX
 	motor->motor_nr = nr;
 	motor->duty_cycle_fd = -1;
 	motor->duty_cycle_sp_fd = -1;
@@ -67,28 +67,28 @@ void load_motor( ev3_motor_ptr motor, int32_t nr)
 	}
 	sprintf(motor->commands[motor->command_count],"%s",mom);
 	motor->command_count++;
-	sprintf(file,"/sys/class/tacho-motor/motor%i/stop_commands",nr);
+	sprintf(file,"/sys/class/tacho-motor/motor%i/stop_actions",nr);
 	ev3_read_file(file,file,1024);
-	motor->stop_command_count = 0;
+	motor->stop_action_count = 0;
 	mom = file;
 	while (end = strchr(mom,' '))
 	{
 		end[0] = 0;
-		sprintf(motor->stop_commands[motor->stop_command_count],"%s",mom);
-		motor->stop_command_count++;
+		sprintf(motor->stop_actions[motor->stop_action_count],"%s",mom);
+		motor->stop_action_count++;
 		mom = end;
 		mom++;
 	}
-	sprintf(motor->stop_commands[motor->stop_command_count],"%s",mom);
-	motor->stop_command_count++;
-	sprintf(file,"/sys/class/tacho-motor/motor%i/stop_command",nr);
+	sprintf(motor->stop_actions[motor->stop_action_count],"%s",mom);
+	motor->stop_action_count++;
+	sprintf(file,"/sys/class/tacho-motor/motor%i/stop_action",nr);
 	ev3_read_file(file,buffer,EV3_STRING_LENGTH);
-	for (motor->stop_command = 0; motor->stop_command < motor->stop_command_count; motor->stop_command++)
-		if (strcmp(motor->stop_commands[motor->stop_command],buffer) == 0)
+	for (motor->stop_action = 0; motor->stop_action < motor->stop_action_count; motor->stop_action++)
+		if (strcmp(motor->stop_actions[motor->stop_action],buffer) == 0)
 			break;
-	sprintf(file,"/sys/class/tacho-motor/motor%i/speed_regulation",nr);
+	sprintf(file,"/sys/class/tacho-motor/motor%i/max_speed",nr);
 	ev3_read_file(file,file,EV3_STRING_LENGTH);
-	motor->speed_regulation = (strcmp(file,"on") == 0);	
+	motor->max_speed = atoi(file);
 }
 
 ev3_motor_ptr ev3_load_motors( void )
@@ -115,7 +115,7 @@ ev3_motor_ptr ev3_load_motors( void )
 			last_motor = motor;
 		}
 		closedir(d);
-	}	
+	}
 	return first_motor;
 }
 
@@ -314,35 +314,35 @@ ev3_motor_ptr ev3_command_motor_by_name( ev3_motor_ptr motor, char* command)
 	return motor;
 }
 
-ev3_motor_ptr ev3_stop_command_motor( ev3_motor_ptr motor, int32_t stop_command)
+ev3_motor_ptr ev3_stop_action_motor( ev3_motor_ptr motor, int32_t stop_action)
 {
 	if (motor == NULL)
 		return NULL;
-	if (stop_command < 0)
+	if (stop_action < 0)
 		return motor;
-	if (stop_command >= motor->stop_command_count)
+	if (stop_action >= motor->stop_action_count)
 		return motor;
 	char file[1024];
-	sprintf(file,"/sys/class/tacho-motor/motor%i/stop_command",motor->motor_nr);
+	sprintf(file,"/sys/class/tacho-motor/motor%i/stop_action",motor->motor_nr);
 	int32_t fd = open(file,O_WRONLY);
-	int32_t l = strlen(motor->stop_commands[stop_command]);
-	int32_t r = write(fd,motor->stop_commands[stop_command],l);
+	int32_t l = strlen(motor->stop_actions[stop_action]);
+	int32_t r = write(fd,motor->stop_actions[stop_action],l);
 	if (l == r)
-		motor->stop_command = stop_command;
+		motor->stop_action = stop_action;
 	close(fd);
 	return motor;
 }
 
-ev3_motor_ptr ev3_stop_command_motor_by_name( ev3_motor_ptr motor, char* stop_command)
+ev3_motor_ptr ev3_stop_action_motor_by_name( ev3_motor_ptr motor, char* stop_action)
 {
 	if (motor == NULL)
 		return NULL;
-	if (stop_command == NULL)
+	if (stop_action == NULL)
 		return motor;
 	int32_t i;
-	for (i = 0; i < motor->stop_command_count; i++)
-		if (strcmp(motor->stop_commands[i],stop_command) == 0)
-			return ev3_stop_command_motor( motor, i );
+	for (i = 0; i < motor->stop_action_count; i++)
+		if (strcmp(motor->stop_actions[i],stop_action) == 0)
+			return ev3_stop_action_motor( motor, i );
 	return motor;
 }
 
@@ -365,26 +365,6 @@ ev3_motor_ptr ev3_reset_motor( ev3_motor_ptr motor)
 	return motor;
 }
 
-void set_speed_regulation( ev3_motor_ptr motor, int32_t on)
-{
-	if (motor == NULL)
-		return;
-	if (motor->speed_regulation == on)
-		return;
-	char file[1024];
-	sprintf(file,"/sys/class/tacho-motor/motor%i/speed_regulation",motor->motor_nr);
-	int32_t fd = open(file,O_WRONLY);
-	if (fd < 0)
-		return;
-	int32_t l;
-	if (on)
-		l = write(fd,"on",2);
-	else
-		l = write(fd,"off",3);
-	close(fd);
-	motor->speed_regulation = on;
-}
-
 int32_t ev3_get_duty_cycle( ev3_motor_ptr motor)
 {
 	if (motor == NULL)
@@ -399,7 +379,6 @@ ev3_motor_ptr ev3_set_duty_cycle_sp( ev3_motor_ptr motor, int32_t value)
 {
 	if (motor == NULL)
 		return NULL;
-	set_speed_regulation( motor, 0 );
 	char buffer[32];
 	sprintf(buffer,"%i",value);
 	lseek(motor->duty_cycle_sp_fd,0,SEEK_SET);
@@ -431,7 +410,6 @@ ev3_motor_ptr ev3_set_speed_sp( ev3_motor_ptr motor, int32_t value)
 {
 	if (motor == NULL)
 		return NULL;
-	set_speed_regulation( motor, 1 );
 	char buffer[32];
 	sprintf(buffer,"%i",value);
 	lseek(motor->speed_sp_fd,0,SEEK_SET);
@@ -596,7 +574,7 @@ ev3_motor_ptr ev3_set_polarity( ev3_motor_ptr motor, int32_t value)
 	sprintf(file,"/sys/class/tacho-motor/motor%i/polarity",motor->motor_nr);
 	int32_t fd = open(file,O_WRONLY);
 	if (fd < 0)
-		return;
+		return NULL;
 	int32_t l;
 	if (value == -1)
 		l = write(motor->time_sp_fd,"inversed",strlen("inversed"));
