@@ -69,7 +69,8 @@ enum ev3_motor_status
 	MOTOR_RUNNING = 1,
 	MOTOR_RAMPING = 2,
 	MOTOR_HOLDING = 4,
-	MOTOR_STALLED = 8
+	MOTOR_STALLED = 8,
+	MOTOR_OVERLOADED = 16
 };
 
 /* type: ev3_motor

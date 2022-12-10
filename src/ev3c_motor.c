@@ -557,6 +557,9 @@ int32_t ev3_motor_state( ev3_motor_ptr motor )
 		else
 		if (strcmp(mom,"stalled") == 0)
 			result |= MOTOR_STALLED;
+		else
+		if (strcmp(mom,"overloaded") == 0)
+			result |= MOTOR_OVERLOADED;
 		mom = end;
 		if (mom)
 			mom++;
