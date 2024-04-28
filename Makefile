@@ -39,7 +39,8 @@ bin/test_battery: src/test_battery.c lib/ev3c.a
 
 documentation: include/*.h
 	mkdir -p /tmp/ev3DocumentationTemp
-	naturaldocs -i . -xi ./ev3c_documentation -o HTML ev3c_documentation -p /tmp/ev3DocumentationTemp
+	mkdir -p doc
+	naturaldocs -i . -xi ./doc -o HTML doc -p /tmp/ev3DocumentationTemp
 
 .PHONY: all clean
 
